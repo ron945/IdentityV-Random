@@ -790,26 +790,102 @@ function loadRoomCode() {
         }
     }
     // 🎯 當任何人點開網址時，自動檢查網址後方有沒有自帶代碼，有就自動還原畫面
-window.addEventListener("DOMContentLoaded", function() {
+window.addEventListener("load", function() {
+    // 使用 "load" 事件，確保 HTML、CSS、和所有的 data.js、talentTreeData.js 都 100% 載入完畢
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     
     if (code) {
         try {
             const roomCodeInput = document.getElementById("roomCode");
-            if (roomCodeInput) roomCodeInput.value = code; // 幫忙把代碼填入框框
+            if (roomCodeInput) roomCodeInput.value = code; // 自動幫忙把代碼填入右側輸入框
             
+            // 解碼 Base64 字串並還原成原始資料物件
             const decodedStr = decodeURIComponent(escape(atob(code.trim())));
             const importedData = JSON.parse(decodedStr);
             
-            // 強制延遲 200 毫秒渲染，確保其他 data.js 資料已經載入完畢
+            // 🎯 保險機制：給瀏覽器 300 毫秒的緩衝時間，再強制執行渲染
             setTimeout(function() {
-                generateOnce(importedData);
+                
+                // 【核心修正】直接在這裡用解出來的資料把畫面「畫」出來，100% 不會因為找不到陣列而壞掉
+                const resultArea = document.getElementById("resultArea");
+                const mapName = document.getElementById("mapName");
+                const boardArea = document.getElementById("boardArea");
                 const roomStatus = document.getElementById("roomStatus");
-                if (roomStatus) roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>🔗 已自動透過網址連結同步抽籤結果！</span>";
-            }, 200);
+
+                if (!resultArea || !importedData) return;
+
+                // 1. 渲染求生者畫面
+                let html = "";
+                html += "<h3>求生者</h3>";
+                importedData.survivors.forEach((surv, i) => {
+                    const ultText = surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+                    html += `
+                        <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
+                            <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
+                            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+                            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
+                        </div>
+                    `;
+                });
+
+                // 2. 渲染監管者畫面
+                html += "<h3>監管者</h3>";
+                if (importedData.hunter) {
+                    const ultText = importedData.hunter.ultimates.length > 0 ? `【${importedData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+                    html += `
+                        <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
+                            <strong style="color: #ff4d4d;">監管者：${importedData.hunter.name}</strong> 
+                            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+                            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${importedData.hunter.detailsText}</div>
+                        </div>
+                    `;
+                }
+                resultArea.innerHTML = html;
+
+                // 3. 渲染地圖與格子
+                if (importedData.map && mapName && boardArea) {
+                    mapName.innerText = importedData.map.name;
+                    
+                    const fixedSet = new Set();
+                    importedData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+
+                    let tableHtml = '<table class="grid-board">';
+                    for (let r = 0; r < importedData.map.rows; r++) {
+                        tableHtml += '<tr>';
+                        for (let c = 0; c < importedData.map.cols; c++) {
+                            const key = r + "-" + c;
+                            if (fixedSet.has(key)) {
+                                tableHtml += '<td style="background: #151515; color: #555;">X</td>';
+                            } else if (importedData.map.cellMarkers[key] !== undefined) {
+                                const marker = importedData.map.cellMarkers[key];
+                                if (marker === "監") {
+                                    tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a; border-color: #8b0000;">${marker}</td>`;
+                                } else {
+                                    tableHtml += `<td style="color: #ffd700; background: #2f2715;">${marker}</td>`;
+                                }
+                            } else {
+                                tableHtml += '<td></td>';
+                            }
+                        }
+                        tableHtml += '</tr>';
+                    }
+                    tableHtml += '</table>';
+                    boardArea.innerHTML = tableHtml;
+                }
+
+                // 4. 更新狀態提示
+                if (roomStatus) {
+                    roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>🔗 已自動透過網址連結同步抽籤結果！</span>";
+                }
+                
+                // 鎖定當前數據
+                lastGeneratedData = importedData;
+
+            }, 300);
+
         } catch (e) {
-            console.error("網址自動讀取代碼失敗:", e);
+            console.error("網址自動解碼或渲染失敗:", e);
         }
     }
 });

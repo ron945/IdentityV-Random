@@ -363,11 +363,8 @@ function getRandomRole(
 
     return selected;
 }
-
-
-
 // ==========================================
-// 1. 右側功能：複製完整網址連結（對應第一顆按鈕）
+// 🎯 右側按鈕功能：複製完整網址連結（第一顆按鈕）
 // ==========================================
 function copyRoomLink() {
     const roomCodeInput = document.getElementById("roomCode");
@@ -385,7 +382,7 @@ function copyRoomLink() {
 }
 
 // ==========================================
-// 2. 右側功能：僅複製純代碼（對應第二顆按鈕）
+// 🎯 右側按鈕功能：僅複製純代碼（第二顆按鈕）
 // ==========================================
 function copyPureCode() {
     const roomCodeInput = document.getElementById("roomCode");
@@ -402,7 +399,7 @@ function copyPureCode() {
 }
 
 // ==========================================
-// 3. 讀取他人代碼或長網址還原畫面（對應第三顆按鈕＋具備自動切換功能）
+// 🎯 右側按鈕功能：讀取代碼/網址同步畫面（第三顆按鈕＋防呆過濾）
 // ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
@@ -415,7 +412,7 @@ function loadRoomCode() {
     let rawCode = roomCodeInput.value.trim();
 
     try {
-        // 🎯 聰明過濾：如果朋友不小心把整串「長網址」貼進格子裡，自動幫他把裡面的 ?code= 抓出來
+        // 聰明防呆：如果使用者不小心把整串「長網址」貼進格子裡，自動幫他把裡面的 ?code= 抓出來
         if (rawCode.includes("?code=")) {
             const urlObj = new URL(rawCode);
             rawCode = urlObj.searchParams.get("code") || rawCode;
@@ -423,10 +420,13 @@ function loadRoomCode() {
         }
 
         // 進行萬能 Base64 解碼
-        const decodedStr = decodeURIComponent(atob(rawCode).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        const decodedStr = decodeURIComponent(atob(rawCode).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
         const importedData = JSON.parse(decodedStr);
         
-        // 呼叫我們新名字的隨機抽選渲染主邏輯
+        // 🚀 【核心修正】呼叫我們改名後的新抽取邏輯，不再呼叫報錯的舊函式
         startRandomDraw(importedData); 
         
         if (roomStatus) {
@@ -440,31 +440,6 @@ function loadRoomCode() {
         console.error(e);
     }
 }
-
-// ==========================================
-// 🎯 4. 【網址自動帶入＋全自動按鈕觸發版】（放在檔案最底部）
-// ==========================================
-window.addEventListener("load", function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-    
-    if (code) {
-        // 給網頁 200 毫秒就緒時間，確保 DOM 容器都載入完畢
-        setTimeout(function() {
-            const roomCodeInput = document.getElementById("roomCode");
-            
-            if (roomCodeInput) {
-                // 自動把網址參數代碼填入格子裡
-                roomCodeInput.value = code;
-                
-                // 🎯 全自動幫連進網址的隊友「隔空點擊」一次【讀取他人代碼】按鈕！
-                loadRoomCode(); 
-                
-                console.log("🔗 網址代碼已成功帶入格子，並自動觸發讀取功能！");
-            }
-        }, 200);
-    }
-});
 
 
 // ==========================================
@@ -656,5 +631,3 @@ function startRandomDraw(externalData = null) {
         boardArea.innerHTML = tableHtml;
     }
 }
-
-

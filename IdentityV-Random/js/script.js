@@ -539,7 +539,7 @@ function startRandomDraw(externalData = null) {
             hunterData = { name: hunter.name, ultimates: ultimates, detailsText: detailsText };
         }
 
-        // ---- 3. 地圖與選點 ----
+                // ---- 3. 地圖與選點 ----
         let mapData = null;
         const enabledMaps = maps.filter(map => !map.disabled);
         if (enabledMaps.length > 0) {
@@ -557,18 +557,15 @@ function startRandomDraw(externalData = null) {
             emptyCells.sort(() => 0.5 - Math.random());
 
             let cellMarkers = {};
+            // A. 精準分配 4 個求生者出生點 (顯示 1, 2, 3, 4)
             for (let i = 1; i <= 4; i++) {
                 if (emptyCells.length > 0) {
                     let cell = emptyCells.shift();
                     cellMarkers[cell.row + "-" + cell.col] = i;
                 }
             }
-            if (emptyCells.length > 0) {
-                let cell = emptyCells.shift();
-                cellMarkers[emptyCells.shift().row + "-" + emptyCells.shift().col] = "監"; // 保險防空
-                let lastCell = emptyCells.shift();
-                if(lastCell) cellMarkers[lastCell.row + "-" + lastCell.col] = "監";
-            }
+            
+            // B. 🎯 【核心修復】精準分配 1 個監管者出生點，多餘的 shift 通通刪除！
             if (emptyCells.length > 0) {
                 let cell = emptyCells.shift();
                 cellMarkers[cell.row + "-" + cell.col] = "監";
@@ -579,6 +576,7 @@ function startRandomDraw(externalData = null) {
 
         finalData = { survivors: survivors, hunter: hunterData, map: mapData };
     }
+
     // 🎯 更換成這個最穩固的中文 Base64 編碼方式：
 if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
     const jsonStr = JSON.stringify(finalData);

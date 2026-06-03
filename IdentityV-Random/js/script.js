@@ -574,7 +574,7 @@ function generateOnce() {
 let lastGeneratedData = null;
 
 // ==========================================
-// 【更新】開始抽取（支援 130點、精簡前置、地圖選點與代碼分享連動）
+// 【終極修復】開始抽取主邏輯（已全面加入 undefined 安全防禦）
 // ==========================================
 function generateOnce(externalData = null) {
     const resultArea = document.getElementById("resultArea");
@@ -582,12 +582,21 @@ function generateOnce(externalData = null) {
     const boardArea = document.getElementById("boardArea");
     const roomCodeInput = document.getElementById("roomCode");
 
+    // 🎯 安全防禦：如果連 HTML 的渲染容器都還沒就緒，直接退出不搶跑
+    if (!resultArea || !mapName || !boardArea) return;
+
     let finalData = {};
 
     // 判斷是讀取別人的代碼，還是自己全新抽取
     if (externalData) {
         finalData = externalData;
     } else {
+        // 🎯 安全防禦：如果是自己抽籤，必須確保角色陣列與天賦樹已經載入完畢，否則直接退出不執行，杜絕 forEach 報錯
+        if (typeof survivorRoles === 'undefined' || typeof hunterRoles === 'undefined' || typeof talentTree === 'undefined' || typeof maps === 'undefined') {
+            console.warn("資料庫尚未加載完畢，無法進行全新抽籤。");
+            return;
+        }
+
         // ---- 1. 求生者抽取 ----
         let survivors = [];
         const usedSurvivors = [];
@@ -595,17 +604,24 @@ function generateOnce(externalData = null) {
             const role = getRandomRole(survivorRoles, usedSurvivors);
             if (role) {
                 const talentResult = generateAdvancedTalents(talentTree.survivor);
-                const filtered = talentResult.allTalents.filter(t => {
-                    const originalNode = talentTree.survivor[t.id];
-                    if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                        return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
-                    }
-                    return true;
-                });
+                
+                // 🎯 這裡加上安全防禦，確保點出天賦才過濾
+                let detailsText = "";
+                if (talentResult && talentResult.allTalents) {
+                    const filtered = talentResult.allTalents.filter(t => {
+                        const originalNode = talentTree.survivor[t.id];
+                        if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                            return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
+                        }
+                        return true;
+                    });
+                    detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
+                }
+
                 survivors.push({
                     name: role.name,
-                    ultimates: talentResult.ultimates,
-                    detailsText: filtered.map(t => `${t.name}(${t.level})`).join(", ")
+                    ultimates: talentResult ? talentResult.ultimates : [],
+                    detailsText: detailsText
                 });
             }
         }
@@ -615,17 +631,23 @@ function generateOnce(externalData = null) {
         const hunter = getRandomRole(hunterRoles, []);
         if (hunter) {
             const talentResult = generateAdvancedTalents(talentTree.hunter);
-            const filtered = talentResult.allTalents.filter(t => {
-                const originalNode = talentTree.hunter[t.id];
-                if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                    return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
-                }
-                return true;
-            });
+            
+            let detailsText = "";
+            if (talentResult && talentResult.allTalents) {
+                const filtered = talentResult.allTalents.filter(t => {
+                    const originalNode = talentTree.hunter[t.id];
+                    if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                        return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
+                    }
+                    return true;
+                });
+                detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
+            }
+
             hunterData = {
                 name: hunter.name,
-                ultimates: talentResult.ultimates,
-                detailsText: filtered.map(t => `${t.name}(${t.level})`).join(", ")
+                ultimates: talentResult ? talentResult.ultimates : [],
+                detailsText: detailsText
             };
         }
 
@@ -680,16 +702,19 @@ function generateOnce(externalData = null) {
     lastGeneratedData = finalData;
 
     // 自己抽籤時，自動將結果打包成 Base64 字串並填入右邊輸入框
-    if (!externalData && roomCodeInput) {
+    if (!externalData && roomCodeInput && finalData && finalData.survivors) {
         const jsonStr = JSON.stringify(finalData);
         roomCodeInput.value = btoa(unescape(encodeURIComponent(jsonStr)));
     }
+
+    // 🎯 核心防禦：確保解出來的 finalData 裡面真的有 survivors 陣列才開始渲染，否則直接煞車
+    if (!finalData || !finalData.survivors) return;
 
     // ---- 4. 開始渲染畫面 ----
     let html = "";
     html += "<h3>求生者</h3>";
     finalData.survivors.forEach((surv, i) => {
-        const ultText = surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        const ultText = surv.ultimates && surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
         html += `
             <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
                 <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
@@ -701,7 +726,7 @@ function generateOnce(externalData = null) {
 
     html += "<h3>監管者</h3>";
     if (finalData.hunter) {
-        const ultText = finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
         html += `
             <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
                 <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
@@ -716,7 +741,9 @@ function generateOnce(externalData = null) {
     if (finalData.map) {
         mapName.innerText = finalData.map.name;
         const fixedSet = new Set();
-        finalData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+        if (finalData.map.fixedBlocks) {
+            finalData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+        }
 
         let tableHtml = '<table class="grid-board">';
         for (let r = 0; r < finalData.map.rows; r++) {
@@ -725,7 +752,7 @@ function generateOnce(externalData = null) {
                 const key = r + "-" + c;
                 if (fixedSet.has(key)) {
                     tableHtml += '<td style="background: #151515; color: #555;">X</td>';
-                } else if (finalData.map.cellMarkers[key] !== undefined) {
+                } else if (finalData.map.cellMarkers && finalData.map.cellMarkers[key] !== undefined) {
                     const marker = finalData.map.cellMarkers[key];
                     if (marker === "監") {
                         tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a; border-color: #8b0000;">${marker}</td>`;
@@ -742,6 +769,7 @@ function generateOnce(externalData = null) {
         boardArea.innerHTML = tableHtml;
     }
 }
+
 
 // ==========================================
 // 【正式實裝】點擊按鈕複製結果代碼

@@ -373,8 +373,9 @@ function copyRoomLink() {
         alert("請先點擊中間的【開始抽取】生成結果，才能複製網址喔！");
         return;
     }
-    // 組合出帶有參數的完整網址
+    // 🎯 按照你的意思：網址後面『直接帶上一模一樣的那串純代碼』，不做任何多餘加工！
     const shareLink = window.location.origin + window.location.pathname + "?code=" + roomCodeInput.value.trim();
+    
     navigator.clipboard.writeText(shareLink);
     if (roomStatus) {
         roomStatus.innerHTML = "<span style='color: #2ECC71; font-weight: bold;'>🔗 網址連結已複製！隊友點開連結就能直接看到結果！</span>";
@@ -391,12 +392,13 @@ function copyPureCode() {
         alert("請先點擊中間的【開始抽取】生成結果，才能複製代碼喔！");
         return;
     }
-    // 只複製輸入框裡的那一長串加密文字
+    // 🎯 直接複製格子裡的那串純代碼
     navigator.clipboard.writeText(roomCodeInput.value.trim());
     if (roomStatus) {
         roomStatus.innerHTML = "<span style='color: #3498DB; font-weight: bold;'>📋 純代碼已複製！適合發在無法發網址的地方。</span>";
     }
 }
+
 
 // ==========================================
 // 🎯 【唯一判讀核心】不論怎麼進來，通通由這個格子進行單一模式解析
@@ -437,29 +439,31 @@ function loadRoomCode() {
 
 
 // ==========================================
-// 🎯 【自動帶入】點擊網址進來時，全自動把網址直接丟進格子
+// 🎯 【網址自動帶入】進網頁時直接把後面那串代碼抓出來，帶進格子裡
 // ==========================================
 window.addEventListener("load", function() {
-    // 1. 抓取當前這串長網址
-    const currentFullUrl = window.location.href;
+    const urlParams = new URLSearchParams(window.location.search);
+    let code = urlParams.get("code");
     
-    // 2. 如果網址裡面有帶 code 參數
-    if (currentFullUrl.includes("?code=")) {
+    // 🎯 按照你的邏輯：只要網址後面有帶那一串代碼
+    if (code) {
         setTimeout(function() {
             const roomCodeInput = document.getElementById("roomCode");
             if (roomCodeInput) {
-                // 🎯 按照你說的，點網址進來也直接把「整串長網址」塞進格子裡！
-                roomCodeInput.value = currentFullUrl; 
+                // 修正瀏覽器網址可能把加號變成空白的吃字問題
+                const cleanCode = code.replace(/ /g, "+");
                 
-                // 🚀 然後觸發格子判讀，大家走完全一樣的流程！
+                // 1. 直接把後面這串代碼完完整整地帶進格子裡！
+                roomCodeInput.value = cleanCode; 
+                
+                // 2. 🚀 直接呼叫你剛剛測試成功、完全可以用的 loadRoomCode() 去格子判讀！
                 loadRoomCode(); 
                 
-                console.log("🔗 網址已成功帶入格子，並觸發單一模式判讀！");
+                console.log("🔗 網址後面的純代碼已全自動帶入格子，並成功觸發判讀！");
             }
         }, 200);
     }
-}); // 👈 這是整張 script.js 的最後一行，後面什麼都沒有了
-
+}); // 👈 這是整個 script.js 檔案的最後一行，後面什麼都沒有了
 
 // ==========================================
 // 【全網新版：最高防禦】改名為 startRandomDraw 徹底避開 691 行衝突

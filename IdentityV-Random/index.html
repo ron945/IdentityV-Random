@@ -191,28 +191,37 @@
             placeholder="抽取後自動生成代碼 / 在此貼上代碼"
         >
 
-        <div class="button-group">
+               <!-- 請用這段完全覆蓋你傳給我的那整串 HTML -->
+        <div class="button-group" style="display: flex; flex-direction: column; gap: 8px;">
 
-            <!-- 房長抽完之後點這顆 -->
+            <!-- 房長專用：複製整串長網址（適合發 LINE 或 Discord，一鍵點開最方便） -->
             <button
-                onclick="copyRoomCode()"
-                style="background: linear-gradient(135deg, #b8860b, #8b6508);"
+                onclick="copyRoomLink()"
+                style="background: linear-gradient(135deg, #b8860b, #8b6508); width: 100%; font-size: 14px; padding: 10px;"
             >
-                📋 複製結果代碼
+                🔗 複製結果網址 (一鍵直接看)
             </button>
 
-            <!-- 隊友貼上之後點這顆 -->
+            <!-- 房長專用：只複製那一長串加密代碼（適合發在遊戲內聊天室，不怕被屏蔽網址） -->
+            <button
+                onclick="copyPureCode()"
+                style="background: linear-gradient(135deg, #7f8c8d, #34495e); width: 100%; font-size: 14px; padding: 10px;"
+            >
+                📋 僅複製純代碼 (適合發遊戲內)
+            </button>
+
+            <!-- 隊友與觀眾專用：把別人給的代碼或整串長網址貼進輸入框後，點這顆一鍵還原 -->
             <button
                 onclick="loadRoomCode()"
-                style="background: linear-gradient(135deg, #006400, #004d00);"
+                style="background: linear-gradient(135deg, #006400, #004d00); width: 100%; font-size: 14px; padding: 10px;"
             >
-                📥 讀取他人代碼
+                📥 讀取他人代碼 / 網址
             </button>
 
         </div>
 
-        <div id="roomStatus" style="color: #bbbbbb; font-size: 0.9rem;">
-            你可以點擊複製發給朋友，或貼上別人的代碼同步畫面。
+        <div id="roomStatus" style="color: #bbbbbb; font-size: 0.9rem; margin-top: 10px;">
+            你可以點擊複製發給朋友，或貼上別人的代碼 / 網址同步畫面。
         </div>
 
     </section>

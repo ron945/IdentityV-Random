@@ -367,170 +367,133 @@ function getRandomRole(
 
 
 // ==========================================
-// 升級版：複製時直接幫你加上網址，點開連結就能看
-function copyRoomCode() {
+// 1. 右側功能：複製完整網址連結（對應第一顆按鈕）
+// ==========================================
+function copyRoomLink() {
+    const roomCodeInput = document.getElementById("roomCode");
+    const roomStatus = document.getElementById("roomStatus");
+    if (!roomCodeInput || !roomCodeInput.value) {
+        alert("請先點擊中間的【開始抽取】生成結果，才能複製網址喔！");
+        return;
+    }
+    // 組合出帶有參數的完整網址
+    const shareLink = window.location.origin + window.location.pathname + "?code=" + roomCodeInput.value.trim();
+    navigator.clipboard.writeText(shareLink);
+    if (roomStatus) {
+        roomStatus.innerHTML = "<span style='color: #2ECC71; font-weight: bold;'>🔗 網址連結已複製！隊友點開連結就能直接看到結果！</span>";
+    }
+}
+
+// ==========================================
+// 2. 右側功能：僅複製純代碼（對應第二顆按鈕）
+// ==========================================
+function copyPureCode() {
     const roomCodeInput = document.getElementById("roomCode");
     const roomStatus = document.getElementById("roomStatus");
     if (!roomCodeInput || !roomCodeInput.value) {
         alert("請先點擊中間的【開始抽取】生成結果，才能複製代碼喔！");
         return;
     }
-    
-    // 🎯 自動幫你把當前網頁的網址 + 代碼組合成一個「超連結」
-    const shareLink = window.location.origin + window.location.pathname + "?code=" + roomCodeInput.value;
-    
-    // 複製這個特製的超連結
-    navigator.clipboard.writeText(shareLink);
+    // 只複製輸入框裡的那一長串加密文字
+    navigator.clipboard.writeText(roomCodeInput.value.trim());
     if (roomStatus) {
-        roomStatus.innerHTML = "<span style='color: #2ECC71; font-weight: bold;'>📋 網址連結已複製！隊友點開連結就能直接看到結果喔！</span>";
+        roomStatus.innerHTML = "<span style='color: #3498DB; font-weight: bold;'>📋 純代碼已複製！適合發在無法發網址的地方。</span>";
     }
 }
 
-
 // ==========================================
-// 【正式實裝】貼上代碼還原同步畫面（已修正大括號）
+// 3. 讀取他人代碼或長網址還原畫面（對應第三顆按鈕＋具備自動切換功能）
 // ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
     const roomStatus = document.getElementById("roomStatus");
     if (!roomCodeInput || !roomCodeInput.value.trim()) {
-        alert("請先將別人的代碼貼進輸入框中！");
+        alert("請先將別人的代碼或網址貼進輸入框中！");
         return;
     }
+    
+    let rawCode = roomCodeInput.value.trim();
+
     try {
-        // 🎯 使用最萬能、不挑中文的解碼方式
-        const decodedStr = decodeURIComponent(atob(roomCodeInput.value.trim()).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        
+        // 🎯 聰明過濾：如果朋友不小心把整串「長網址」貼進格子裡，自動幫他把裡面的 ?code= 抓出來
+        if (rawCode.includes("?code=")) {
+            const urlObj = new URL(rawCode);
+            rawCode = urlObj.searchParams.get("code") || rawCode;
+            roomCodeInput.value = rawCode; // 貼心地幫他把輸入框淨化成純代碼
+        }
+
+        // 進行萬能 Base64 解碼
+        const decodedStr = decodeURIComponent(atob(rawCode).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         const importedData = JSON.parse(decodedStr);
-        generateOnce(importedData); // 還原畫面
+        
+        // 呼叫我們新名字的隨機抽選渲染主邏輯
+        startRandomDraw(importedData); 
         
         if (roomStatus) {
-            roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>📥 成功讀取他人代碼！畫面已完全同步。</span>";
+            roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>📥 成功讀取！畫面已完全同步還原。</span>";
         }
     } catch (e) {
-        alert("❌ 錯誤：代碼格式不正確，請確認是否有複製完整！");
+        alert("❌ 錯誤：無法解析，請確認是否有複製完整！");
         if (roomStatus) {
-            roomStatus.innerHTML = "<span style='color: #E74C3C; font-weight: bold;'>❌ 讀取失敗，代碼無效。</span>";
+            roomStatus.innerHTML = "<span style='color: #E74C3C; font-weight: bold;'>❌ 讀取失敗，代碼或網址無效。</span>";
         }
         console.error(e);
     }
-} // 👈 【關鍵修正】這裡是你原本漏掉的、專屬於 loadRoomCode 的結尾大括號！
-
+}
 
 // ==========================================
-// 🎯 【暴力不卡死版】直接檢查網址參數並還原（已與上方函式完全獨立）
+// 🎯 4. 【網址自動帶入＋全自動按鈕觸發版】（放在檔案最底部）
 // ==========================================
-(function() {
+window.addEventListener("load", function() {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     
     if (code) {
-        // 設定定時器，每 150 毫秒檢查一次 HTML 容器好了沒，好了就立刻暴力畫出來
-        let checkTimer = setInterval(function() {
-            const resultArea = document.getElementById("resultArea");
-            const mapName = document.getElementById("mapName");
-            const boardArea = document.getElementById("boardArea");
-
-            // 確保 HTML 容器都已經在網頁上就緒了
-            if (resultArea && mapName && boardArea) {
-
-                try {
-                    // 🎯 使用最萬能、不挑字元的瀏覽器原生解碼寫法
-                    const decodedStr = decodeURIComponent(atob(code.trim()).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join(''));
-                    
-                    const importedData = JSON.parse(decodedStr);
-
-                    // 安全防禦：如果資料還沒完全解開，繼續等待下一次
-                    if (!importedData || !importedData.survivors || !importedData.map) {
-                        return; 
-                    }
-
-                    // 順利過關！關閉計時器開始渲染
-                    clearInterval(checkTimer);
-
-                    // 幫忙把代碼填入右側輸入框
-                    const roomCodeInput = document.getElementById("roomCode");
-                    if (roomCodeInput) roomCodeInput.value = code;
-
-                    // 1. 渲染求生者畫面
-                    let html = "<h3>求生者</h3>";
-                    importedData.survivors.forEach((surv, i) => {
-                        const ultText = surv.ultimates && surv.ultimates.length > 0 
-                            ? `【${surv.ultimates.join(" + ")}】` 
-                            : "【無大天賦偏策】";
-                        html += `
-                            <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
-                                <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
-                                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
-                            </div>
-                        `;
-                    });
-
-                    // 2. 渲染監管者畫面
-                    html += "<h3>監管者</h3>";
-                    if (importedData.hunter) {
-                        const ultText = importedData.hunter.ultimates && importedData.hunter.ultimates.length > 0 
-                            ? `【${importedData.hunter.ultimates.join(" + ")}】` 
-                            : "【無大天賦偏策】";
-                        html += `
-                            <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
-                                <strong style="color: #ff4d4d;">監管者：${importedData.hunter.name}</strong> 
-                                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${importedData.hunter.detailsText}</div>
-                            </div>
-                        `;
-                    }
-                    resultArea.innerHTML = html;
-
-                    // 3. 渲染地圖與格子
-                    mapName.innerText = importedData.map.name;
-                    
-                    const fixedSet = new Set();
-                    if (importedData.map.fixedBlocks) {
-                        importedData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
-                    }
-
-                    let tableHtml = '<table class="grid-board">';
-                    for (let r = 0; r < importedData.map.rows; r++) {
-                        tableHtml += '<tr>';
-                        for (let c = 0; c < importedData.map.cols; c++) {
-                            const key = r + "-" + c;
-                            if (fixedSet.has(key)) {
-                                tableHtml += '<td style="background: #151515; color: #555;">X</td>';
-                            } else if (importedData.map.cellMarkers && importedData.map.cellMarkers[key] !== undefined) {
-                                const marker = importedData.map.cellMarkers[key];
-                                if (marker === "監") {
-                                    tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a; border-color: #8b0000;">${marker}</td>`;
-                                } else {
-                                    tableHtml += `<td style="color: #ffd700; background: #2f2715;">${marker}</td>`;
-                                }
-                            } else {
-                                tableHtml += '<td></td>';
-                            }
-                        }
-                        tableHtml += '</tr>';
-                    }
-                    tableHtml += '</table>';
-                    boardArea.innerHTML = tableHtml;
-
-                    // 4. 更新狀態提示
-                    const roomStatus = document.getElementById("roomStatus");
-                    if (roomStatus) roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>🔗 已自動透過網址連結同步抽籤結果！</span>";
-                    
-                    lastGeneratedData = importedData;
-
-                } catch (e) {
-                    console.error("網址暴力解析失敗，等待下一波加載:", e);
-                }
+        // 給網頁 200 毫秒就緒時間，確保 DOM 容器都載入完畢
+        setTimeout(function() {
+            const roomCodeInput = document.getElementById("roomCode");
+            
+            if (roomCodeInput) {
+                // 自動把網址參數代碼填入格子裡
+                roomCodeInput.value = code;
+                
+                // 🎯 全自動幫連進網址的隊友「隔空點擊」一次【讀取他人代碼】按鈕！
+                loadRoomCode(); 
+                
+                console.log("🔗 網址代碼已成功帶入格子，並自動觸發讀取功能！");
             }
-        }, 150);
+        }, 200);
     }
-})();
+});
+
+
+// ==========================================
+// 🎯 【網址自動帶入＋全自動按鈕觸發版】
+// ==========================================
+window.addEventListener("load", function() {
+    // 1. 取得網址後方的參數
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    
+    // 2. 如果網址有帶 code 參數
+    if (code) {
+        // 給網頁 200 毫秒極短的就緒時間
+        setTimeout(function() {
+            const roomCodeInput = document.getElementById("roomCode");
+            
+            if (roomCodeInput) {
+                // 自動把代碼填入格子裡
+                roomCodeInput.value = code;
+                
+                // 🎯 核心特技：全自動幫使用者「隔空點擊」一次【讀取他人代碼】按鈕！
+                loadRoomCode(); 
+                
+                console.log("🔗 網址代碼已成功帶入格子，並自動觸發讀取功能！");
+            }
+        }, 200);
+    }
+});
+
 // ==========================================
 // 【全網新版：最高防禦】改名為 startRandomDraw 徹底避開 691 行衝突
 // ==========================================

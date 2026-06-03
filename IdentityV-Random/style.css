@@ -1,0 +1,283 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:
+    "Microsoft JhengHei",
+    sans-serif;
+
+    background:
+    linear-gradient(
+        135deg,
+        #161616,
+        #202020
+    );
+
+    color:#f4e8c1;
+    min-height:100vh;
+}
+
+.main-container{
+    width:95%;
+    margin:auto;
+    padding:20px;
+}
+
+/* 標題 */
+.header{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.header h1{
+    font-size:38px;
+    color:#d4af37;
+    text-shadow:
+        0 0 12px rgba(212,175,55,.6);
+}
+
+/* 三欄 */
+.grid-layout{
+    display:grid;
+
+    grid-template-columns:
+    1fr 1.2fr 0.8fr;
+
+    gap:20px;
+}
+
+/* 面板 */
+.panel{
+    background:
+    rgba(25,25,25,.95);
+
+    border:
+    2px solid #8b6f2c;
+
+    border-radius:16px;
+
+    padding:20px;
+
+    margin-bottom:20px;
+
+    box-shadow:
+    0 0 20px rgba(0,0,0,.5);
+
+    transition:.3s;
+}
+
+.panel:hover{
+    transform:
+    translateY(-2px);
+
+    box-shadow:
+    0 0 25px rgba(
+        212,
+        175,
+        55,
+        .15
+    );
+}
+
+.panel h2{
+    color:#d4af37;
+    margin-bottom:15px;
+    border-bottom:
+    2px solid #5e4a1f;
+    padding-bottom:8px;
+}
+
+.section-title{
+    font-size:18px;
+    margin-top:10px;
+    margin-bottom:10px;
+    color:#d6c28d;
+}
+
+/* checkbox 區 */
+.checkbox-list{
+    max-height:250px;
+    overflow-y:auto;
+
+    background:#111;
+
+    border-radius:10px;
+
+    padding:12px;
+}
+
+/*  這是修改後的完美對齊版本 */
+.checkbox-item{
+    margin-bottom: 8px;
+    display: flex;               /* 啟動彈性排版 */
+    justify-content: space-between; /* 讓左邊角色名字靠左，右邊勾選框靠右 */
+    align-items: center;         /* 🎯 關鍵：讓文字和勾選框維持在同一條水平線，絕不歪斜 */
+    padding: 2px 4px;            /* 微調內邊距，點擊起來更順手 */
+}
+
+/* 額外補充：如果你原本勾選框沒給寬度，為了防止它被寬度100%撐大，補上這段 */
+.checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.checkbox-item label{
+    cursor:pointer;
+}
+
+/* 按鈕 */
+.button-group{
+    display:flex;
+    gap:10px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+}
+
+button{
+    border:none;
+    padding:10px 16px;
+    border-radius:10px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #8b0000,
+        #5c0000
+    );
+
+    color:white;
+
+    cursor:pointer;
+    transition:.2s;
+
+    font-weight:bold;
+}
+
+button:hover{
+    transform:scale(1.05);
+
+    box-shadow:
+    0 0 15px rgba(
+        255,
+        50,
+        50,
+        .4
+    );
+}
+
+.start-btn{
+    width:100%;
+    font-size:22px;
+    padding:18px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #b8860b,
+        #8b6508
+    );
+}
+
+/* 結果 */
+#resultArea{
+    min-height:300px;
+}
+
+.result-card{
+    background:#2a2a2a;
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:12px;
+
+    border:
+    1px solid
+    rgba(212,175,55,.3);
+}
+
+.result-title{
+    font-size:18px;
+    color:#ffd700;
+    margin-bottom:10px;
+}
+
+.talent-item{
+    background:#1a1a1a;
+    border-radius:8px;
+    padding:8px;
+    margin-bottom:8px;
+}
+
+/* 地圖格子 */
+#boardArea{
+    margin-top:15px;
+}
+
+.grid-board{
+    border-collapse:collapse;
+}
+
+.grid-board td{
+    width:55px;
+    height:55px;
+
+    border:
+    2px solid
+    #8b6f2c;
+
+    text-align:center;
+
+    font-size:20px;
+    font-weight:bold;
+
+    background:#2a2a2a;
+}
+
+/* 🎯 強制修正全域 input 對勾選框的拉伸與變形干擾 */
+.checkbox-item input[type="checkbox"] {
+    width: 16px !important;    /* 固定勾選框寬度 */
+    height: 16px !important;   /* 固定勾選框高度 */
+    padding: 0 !important;     /* 消除 10px padding 造成的超級變形 */
+    margin: 0 !important;      /* 消除外邊距 */
+    cursor: pointer;           /* 滑鼠指尖 */
+    
+    /* 核心對齊：如果你的 input 在 label 裡面，這行會強制讓它飄去最右邊 */
+    float: right;              
+}
+
+/* 確保整個外層格子支援水平文字置中與滑鼠點擊 */
+.checkbox-item {
+    display: block;            /* 改回區塊元素，完美配合 float 效果 */
+    width: 100%;
+    line-height: 24px;         /* 🎯 關鍵：用行高直接強制文字與右邊勾選框垂直置中 */
+    margin-bottom: 8px;
+}
+
+.checkbox-item label {
+    display: block;            /* 讓 label 撐滿整橫行，這樣整行都可以點擊 */
+    width: 100%;
+    cursor: pointer;
+    color: #f4e8c1;            /* 保持你原本設定的黃金色文字 */
+}
+/* 確保地圖表格在外層容器中水平均勻置中 */
+.grid-board {
+    margin: 10px auto 0 auto;  /* auto 讓它置中 */
+    border-collapse: collapse;
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+}
+
+/* 優化格子內文字的行高與點亮視覺效果 */
+.grid-board td {
+    width: 55px;
+    height: 55px;
+    border: 2px solid #8b6f2c;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    background: #2a2a2a;
+    transition: background 0.3s;
+    vertical-align: middle; /* 確保 1, 2, 3, 4, 監 垂直置中 */
+}

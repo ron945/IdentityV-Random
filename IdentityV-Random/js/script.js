@@ -399,7 +399,7 @@ function copyPureCode() {
 }
 
 // ==========================================
-// 🎯 右側按鈕功能：讀取代碼/網址同步畫面（第三顆按鈕＋防呆過濾）
+// 🎯 【同步更新】讀取他人代碼或長網址還原畫面
 // ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
@@ -412,21 +412,21 @@ function loadRoomCode() {
     let rawCode = roomCodeInput.value.trim();
 
     try {
-        // 聰明防呆：如果使用者不小心把整串「長網址」貼進格子裡，自動幫他把裡面的 ?code= 抓出來
+        // 聰明防呆：如果朋友把整串網址貼進來，自動切碎只拿 code
         if (rawCode.includes("?code=")) {
             const urlObj = new URL(rawCode);
             rawCode = urlObj.searchParams.get("code") || rawCode;
-            roomCodeInput.value = rawCode; // 貼心地幫他把輸入框淨化成純代碼
+            roomCodeInput.value = rawCode; 
         }
 
-        // 進行萬能 Base64 解碼
+        // 🎯 核心關鍵：換成能百分之百解開上方壓縮法的高級解碼器！
         const decodedStr = decodeURIComponent(atob(rawCode).split('').map(function(c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         
         const importedData = JSON.parse(decodedStr);
         
-        // 🚀 【核心修正】呼叫我們改名後的新抽取邏輯，不再呼叫報錯的舊函式
+        // 還原畫面
         startRandomDraw(importedData); 
         
         if (roomStatus) {
@@ -440,6 +440,7 @@ function loadRoomCode() {
         console.error(e);
     }
 }
+
 
 
 // ==========================================
@@ -576,11 +577,15 @@ function startRandomDraw(externalData = null) {
 
         finalData = { survivors: survivors, hunter: hunterData, map: mapData };
     }
+    // 🎯 更換成這個最穩固的中文 Base64 編碼方式：
+if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
+    const jsonStr = JSON.stringify(finalData);
+    // 萬能中文相容壓縮法
+    roomCodeInput.value = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+        return String.fromCharCode(parseInt(p1, 16));
+    }));
+}
 
-    if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
-        const jsonStr = JSON.stringify(finalData);
-        roomCodeInput.value = btoa(unescape(encodeURIComponent(jsonStr)));
-    }
 
     if (!finalData || !finalData.survivors || finalData.survivors.length === 0) return;
 

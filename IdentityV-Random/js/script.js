@@ -7,7 +7,8 @@
 // ==========================
 // 初始化
 // ==========================
-
+// 全域變數，供複製代碼功能抓取當下狀態
+let lastGeneratedData = null;
 window.onload = function () {
 
     renderRoleLists();
@@ -363,208 +364,8 @@ function getRandomRole(
     return selected;
 }
 
-// 全域變數，供複製代碼功能抓取當下狀態
-let lastGeneratedData = null;
-
-// ==========================================
-// 【終極修復】開始抽取與還原主邏輯（已完美合體）
-// ==========================================
-function generateOnce(externalData = null) {
-    const resultArea = document.getElementById("resultArea");
-    const mapName = document.getElementById("mapName");
-    const boardArea = document.getElementById("boardArea");
-    const roomCodeInput = document.getElementById("roomCode");
-
-    // 🎯 1. 基礎防禦：HTML 面板還沒加載好就絕對不執行
-    if (!resultArea || !mapName || !boardArea) return;
-
-    // 🎯 2. 初始化 finalData，並給予預設的空陣列，保證 forEach 絕對不會因 undefined 崩潰
-    let finalData = {
-        survivors: [],
-        hunter: null,
-        map: null
-    };
-
-    if (externalData) {
-        // 如果有傳入網址代碼資料，進行深拷貝並補上預設防禦值
-        finalData = JSON.parse(JSON.stringify(externalData));
-        if (!finalData.survivors) finalData.survivors = [];
-    } else {
-        // 🎯 3. 抽籤防禦：如果資料庫檔案還沒載入完，直接煞車退出
-        if (typeof survivorRoles === 'undefined' || typeof hunterRoles === 'undefined' || typeof talentTree === 'undefined' || typeof maps === 'undefined') {
-            console.warn("[隨機抽取器] 資料庫加載中，暫時攔截全新抽籤要求。");
-            return;
-        }
-
-        // ---- 求生者抽取 ----
-        let survivors = [];
-        const usedSurvivors = [];
-        for (let i = 0; i < 4; i++) {
-            const role = getRandomRole(survivorRoles, usedSurvivors);
-            if (role) {
-                const talentResult = typeof generateAdvancedTalents !== 'undefined' ? generateAdvancedTalents(talentTree.survivor) : null;
-                let detailsText = "";
-                let ultimates = [];
-                
-                if (talentResult && talentResult.allTalents) {
-                    ultimates = talentResult.ultimates || [];
-                    const filtered = talentResult.allTalents.filter(t => {
-                        const originalNode = talentTree.survivor[t.id];
-                        if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                            return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
-                        }
-                        return true;
-                    });
-                    detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
-                }
-
-                survivors.push({ name: role.name, ultimates: ultimates, detailsText: detailsText });
-            }
-        }
-
-        // ---- 監管者抽取 ----
-        let hunterData = null;
-        const hunter = getRandomRole(hunterRoles, []);
-        if (hunter) {
-            const talentResult = typeof generateAdvancedTalents !== 'undefined' ? generateAdvancedTalents(talentTree.hunter) : null;
-            let detailsText = "";
-            let ultimates = [];
-            
-            if (talentResult && talentResult.allTalents) {
-                ultimates = talentResult.ultimates || [];
-                const filtered = talentResult.allTalents.filter(t => {
-                    const originalNode = talentTree.hunter[t.id];
-                    if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                        return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
-                    }
-                    return true;
-                });
-                detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
-            }
-
-            hunterData = { name: hunter.name, ultimates: ultimates, detailsText: detailsText };
-        }
-
-        // ---- 地圖與選點 ----
-        let mapData = null;
-        const enabledMaps = maps.filter(map => !map.disabled);
-        if (enabledMaps.length > 0) {
-            const mapIndex = Math.floor(Math.random() * enabledMaps.length);
-            const selectedMap = enabledMaps[mapIndex];
-
-            const fixedSet = new Set();
-            if (selectedMap.fixedBlocks) {
-                selectedMap.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
-            }
-
-            let emptyCells = [];
-            for (let r = 0; r < selectedMap.rows; r++) {
-                for (let c = 0; c < selectedMap.cols; c++) {
-                    if (!fixedSet.has(r + "-" + c)) emptyCells.push({ row: r, col: c });
-                }
-            }
-            emptyCells.sort(() => 0.5 - Math.random());
-
-            let cellMarkers = {};
-            for (let i = 1; i <= 4; i++) {
-                if (emptyCells.length > 0) {
-                    let cell = emptyCells.shift();
-                    cellMarkers[cell.row + "-" + cell.col] = i;
-                }
-            }
-            if (emptyCells.length > 0) {
-                let cell = emptyCells.shift();
-                cellMarkers[cell.row + "-" + cell.col] = "監";
-            }
-
-            mapData = {
-                name: selectedMap.name,
-                rows: selectedMap.rows,
-                cols: selectedMap.cols,
-                fixedBlocks: selectedMap.fixedBlocks || [],
-                cellMarkers: cellMarkers
-            };
-        }
-
-        finalData = { survivors: survivors, hunter: hunterData, map: mapData };
-    }
-
-    lastGeneratedData = finalData;
-
-    // 自己抽籤時，自動在右側框框填入代碼
-    if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
-        const jsonStr = JSON.stringify(finalData);
-        roomCodeInput.value = btoa(unescape(encodeURIComponent(jsonStr)));
-    }
-
-    // 🎯 4. 終極渲染防禦：如果沒人、或是陣列長度為 0，在這裡安全停下，絕不往下走
-    if (!finalData || !finalData.survivors || finalData.survivors.length === 0) return;
-
-    // ---- 5. 渲染求生者畫面 ----
-    let html = "";
-    html += "<h3>求生者</h3>";
-    finalData.survivors.forEach((surv, i) => {
-        const ultText = surv.ultimates && surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
-        html += `
-            <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
-                <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
-                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
-            </div>
-        `;
-    });
-
-    // ---- 6. 渲染監管者畫面 ----
-    html += "<h3>監管者</h3>";
-    if (finalData.hunter) {
-        const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
-        html += `
-            <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
-                <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
-                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${finalData.hunter.detailsText}</div>
-            </div>
-        `;
-    }
-    resultArea.innerHTML = html;
-
-    // ---- 7. 渲染地圖與格子 ----
-    if (finalData.map) {
-        mapName.innerText = finalData.map.name;
-        const fixedSet = new Set();
-        if (finalData.map.fixedBlocks) {
-            finalData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
-        }
-
-        let tableHtml = '<table class="grid-board">';
-        for (let r = 0; r < finalData.map.rows; r++) {
-            tableHtml += '<tr>';
-            for (let c = 0; c < finalData.map.cols; c++) {
-                const key = r + "-" + c;
-                if (fixedSet.has(key)) {
-                    tableHtml += '<td style="background: #151515; color: #555;">X</td>';
-                } else if (finalData.map.cellMarkers && finalData.map.cellMarkers[key] !== undefined) {
-                    const marker = finalData.map.cellMarkers[key];
-                    if (marker === "監") {
-                        tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a; border-color: #8b0000;">${marker}</td>`;
-                    } else {
-                        tableHtml += `<td style="color: #ffd700; background: #2f2715;">${marker}</td>`;
-                    }
-                } else {
-                    tableHtml += '<td></td>';
-                }
-            }
-            tableHtml += '</tr>';
-        }
-        tableHtml += '</table>';
-        boardArea.innerHTML = tableHtml;
-    }
-}
 
 
-
-// ==========================================
-// 【正式實裝】點擊按鈕複製結果代碼
 // ==========================================
 // 升級版：複製時直接幫你加上網址，點開連結就能看
 function copyRoomCode() {
@@ -730,4 +531,167 @@ function loadRoomCode() {
         }, 150);
     }
 })();
+// ==========================================
+// 【全網新版：最高防禦】改名為 startRandomDraw 徹底避開 691 行衝突
+// ==========================================
+function startRandomDraw(externalData = null) {
+    const resultArea = document.getElementById("resultArea");
+    const mapName = document.getElementById("mapName");
+    const boardArea = document.getElementById("boardArea");
+    const roomCodeInput = document.getElementById("roomCode");
+
+    if (!resultArea || !mapName || !boardArea) return;
+
+    let finalData = { survivors: [], hunter: null, map: null };
+
+    if (externalData) {
+        finalData = JSON.parse(JSON.stringify(externalData));
+        if (!finalData.survivors) finalData.survivors = [];
+    } else {
+        if (typeof survivorRoles === 'undefined' || typeof hunterRoles === 'undefined' || typeof talentTree === 'undefined' || typeof maps === 'undefined') {
+            console.warn("資料庫尚未就緒。");
+            return;
+        }
+
+        // ---- 1. 求生者抽取 ----
+        let survivors = [];
+        const usedSurvivors = [];
+        for (let i = 0; i < 4; i++) {
+            const role = getRandomRole(survivorRoles, usedSurvivors);
+            if (role) {
+                const talentResult = typeof generateAdvancedTalents !== 'undefined' ? generateAdvancedTalents(talentTree.survivor) : null;
+                let detailsText = "";
+                let ultimates = [];
+                if (talentResult && talentResult.allTalents) {
+                    ultimates = talentResult.ultimates || [];
+                    const filtered = talentResult.allTalents.filter(t => {
+                        const originalNode = talentTree.survivor[t.id];
+                        if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                            return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
+                        }
+                        return true;
+                    });
+                    detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
+                }
+                survivors.push({ name: role.name, ultimates: ultimates, detailsText: detailsText });
+            }
+        }
+
+        // ---- 2. 監管者抽取 ----
+        let hunterData = null;
+        const hunter = getRandomRole(hunterRoles, []);
+        if (hunter) {
+            const talentResult = typeof generateAdvancedTalents !== 'undefined' ? generateAdvancedTalents(talentTree.hunter) : null;
+            let detailsText = "";
+            let ultimates = [];
+            if (talentResult && talentResult.allTalents) {
+                ultimates = talentResult.ultimates || [];
+                const filtered = talentResult.allTalents.filter(t => {
+                    const originalNode = talentTree.hunter[t.id];
+                    if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                        return !originalNode.children.some(childId => talentResult.allTalents.some(active => active.id === childId && active.level > 0));
+                    }
+                    return true;
+                });
+                detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
+            }
+            hunterData = { name: hunter.name, ultimates: ultimates, detailsText: detailsText };
+        }
+
+        // ---- 3. 地圖與選點 ----
+        let mapData = null;
+        const enabledMaps = maps.filter(map => !map.disabled);
+        if (enabledMaps.length > 0) {
+            const mapIndex = Math.floor(Math.random() * enabledMaps.length);
+            const selectedMap = enabledMaps[mapIndex];
+            const fixedSet = new Set();
+            if (selectedMap.fixedBlocks) selectedMap.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+
+            let emptyCells = [];
+            for (let r = 0; r < selectedMap.rows; r++) {
+                for (let c = 0; c < selectedMap.cols; c++) {
+                    if (!fixedSet.has(r + "-" + c)) emptyCells.push({ row: r, col: c });
+                }
+            }
+            emptyCells.sort(() => 0.5 - Math.random());
+
+            let cellMarkers = {};
+            for (let i = 1; i <= 4; i++) {
+                if (emptyCells.length > 0) {
+                    let cell = emptyCells.shift();
+                    cellMarkers[cell.row + "-" + cell.col] = i;
+                }
+            }
+            if (emptyCells.length > 0) {
+                let cell = emptyCells.shift();
+                cellMarkers[emptyCells.shift().row + "-" + emptyCells.shift().col] = "監"; // 保險防空
+                let lastCell = emptyCells.shift();
+                if(lastCell) cellMarkers[lastCell.row + "-" + lastCell.col] = "監";
+            }
+            if (emptyCells.length > 0) {
+                let cell = emptyCells.shift();
+                cellMarkers[cell.row + "-" + cell.col] = "監";
+            }
+
+            mapData = { name: selectedMap.name, rows: selectedMap.rows, cols: selectedMap.cols, fixedBlocks: selectedMap.fixedBlocks || [], cellMarkers: cellMarkers };
+        }
+
+        finalData = { survivors: survivors, hunter: hunterData, map: mapData };
+    }
+
+    if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
+        const jsonStr = JSON.stringify(finalData);
+        roomCodeInput.value = btoa(unescape(encodeURIComponent(jsonStr)));
+    }
+
+    if (!finalData || !finalData.survivors || finalData.survivors.length === 0) return;
+
+    // ---- 4. 渲染畫面 ----
+    let html = "<h3>求生者</h3>";
+    finalData.survivors.forEach((surv, i) => {
+        const ultText = surv.ultimates && surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        html += `<div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
+            <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
+            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
+        </div>`;
+    });
+
+    html += "<h3>監管者</h3>";
+    if (finalData.hunter) {
+        const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.grid || finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        html += `<div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
+            <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
+            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${finalData.hunter.detailsText}</div>
+        </div>`;
+    }
+    resultArea.innerHTML = html;
+
+    if (finalData.map) {
+        mapName.innerText = finalData.map.name;
+        const fixedSet = new Set();
+        if (finalData.map.fixedBlocks) finalData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+
+        let tableHtml = '<table class="grid-board">';
+        for (let r = 0; r < finalData.map.rows; r++) {
+            tableHtml += '<tr>';
+            for (let c = 0; c < finalData.map.cols; c++) {
+                const key = r + "-" + c;
+                if (fixedSet.has(key)) {
+                    tableHtml += '<td style="background: #151515; color: #555;">X</td>';
+                } else if (finalData.map.cellMarkers && finalData.map.cellMarkers[key] !== undefined) {
+                    const marker = finalData.map.cellMarkers[key];
+                    tableHtml += `<td style="color: ${marker === '監' ? '#ff4d4d' : '#ffd700'}; background: ${marker === '監' ? '#3a1a1a' : '#2f2715'};">${marker}</td>`;
+                } else {
+                    tableHtml += '<td></td>';
+                }
+            }
+            tableHtml += '</tr>';
+        }
+        tableHtml += '</table>';
+        boardArea.innerHTML = tableHtml;
+    }
+}
+
 

@@ -399,76 +399,67 @@ function copyPureCode() {
 }
 
 // ==========================================
-// 🎯 【同步更新】讀取他人代碼或長網址還原畫面
+// 🎯 【唯一判讀核心】不論怎麼進來，通通由這個格子進行單一模式解析
 // ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
     const roomStatus = document.getElementById("roomStatus");
-    if (!roomCodeInput || !roomCodeInput.value.trim()) {
-        alert("請先將別人的代碼或網址貼進輸入框中！");
-        return;
-    }
+    if (!roomCodeInput || !roomCodeInput.value.trim()) return;
     
     let rawCode = roomCodeInput.value.trim();
 
     try {
-        // 聰明防呆：如果朋友把整串網址貼進來，自動切碎只拿 code
+        // 🎯 智慧防呆：不管是純代碼，還是整串「長網址」在格子裡，通通在這裡切碎只拿 code！
         if (rawCode.includes("?code=")) {
             const urlObj = new URL(rawCode);
             rawCode = urlObj.searchParams.get("code") || rawCode;
+            // 順手幫輸入框淨化成乾淨的純代碼，畫面比較好看
             roomCodeInput.value = rawCode; 
         }
 
-        // 🎯 核心關鍵：換成能百分之百解開上方壓縮法的高級解碼器！
+        // 🎯 唯一的標準解碼公式（100% 支援中文字）
         const decodedStr = decodeURIComponent(atob(rawCode).split('').map(function(c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         
         const importedData = JSON.parse(decodedStr);
         
-        // 還原畫面
-        startRandomDraw(importedData); 
-        
-        if (roomStatus) {
-            roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>📥 成功讀取！畫面已完全同步還原。</span>";
+        // 餵給 startRandomDraw 去暴力畫畫面
+        if (importedData && importedData.survivors) {
+            startRandomDraw(importedData); 
+            if (roomStatus) roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>📥 成功讀取還原！</span>";
         }
     } catch (e) {
         alert("❌ 錯誤：無法解析，請確認是否有複製完整！");
-        if (roomStatus) {
-            roomStatus.innerHTML = "<span style='color: #E74C3C; font-weight: bold;'>❌ 讀取失敗，代碼或網址無效。</span>";
-        }
-        console.error(e);
+        console.error("解析失敗原因:", e);
     }
 }
 
 
-
 // ==========================================
-// 🎯 【網址自動帶入＋全自動按鈕觸發版】
+// 🎯 【自動帶入】點擊網址進來時，全自動把網址直接丟進格子
 // ==========================================
 window.addEventListener("load", function() {
-    // 1. 取得網址後方的參數
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
+    // 1. 抓取當前這串長網址
+    const currentFullUrl = window.location.href;
     
-    // 2. 如果網址有帶 code 參數
-    if (code) {
-        // 給網頁 200 毫秒極短的就緒時間
+    // 2. 如果網址裡面有帶 code 參數
+    if (currentFullUrl.includes("?code=")) {
         setTimeout(function() {
             const roomCodeInput = document.getElementById("roomCode");
-            
             if (roomCodeInput) {
-                // 自動把代碼填入格子裡
-                roomCodeInput.value = code;
+                // 🎯 按照你說的，點網址進來也直接把「整串長網址」塞進格子裡！
+                roomCodeInput.value = currentFullUrl; 
                 
-                // 🎯 核心特技：全自動幫使用者「隔空點擊」一次【讀取他人代碼】按鈕！
+                // 🚀 然後觸發格子判讀，大家走完全一樣的流程！
                 loadRoomCode(); 
                 
-                console.log("🔗 網址代碼已成功帶入格子，並自動觸發讀取功能！");
+                console.log("🔗 網址已成功帶入格子，並觸發單一模式判讀！");
             }
         }, 200);
     }
-});
+}); // 👈 這是整張 script.js 的最後一行，後面什麼都沒有了
+
 
 // ==========================================
 // 【全網新版：最高防禦】改名為 startRandomDraw 徹底避開 691 行衝突

@@ -400,9 +400,6 @@ function copyPureCode() {
 }
 
 
-// ==========================================
-// 🎯 【唯一判讀核心】不論怎麼進來，通通由這個格子進行單一模式解析
-// ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
     const roomStatus = document.getElementById("roomStatus");
@@ -411,15 +408,24 @@ function loadRoomCode() {
     let rawCode = roomCodeInput.value.trim();
 
     try {
-        // 🎯 智慧防呆：不管是純代碼，還是整串「長網址」在格子裡，通通在這裡切碎只拿 code！
+        // 🎯 1. 如果貼進來的是整串長網址，在這裡先切碎它，只拿 code= 後面的部分
         if (rawCode.includes("?code=")) {
             const urlObj = new URL(rawCode);
             rawCode = urlObj.searchParams.get("code") || rawCode;
-            // 順手幫輸入框淨化成乾淨的純代碼，畫面比較好看
-            roomCodeInput.value = rawCode; 
         }
 
-        // 🎯 唯一的標準解碼公式（100% 支援中文字）
+        // 🎯 2. 【核心新增：徹底消滅換行與空格】
+        // 無條件把所有「亂換行(\r \n)」與「亂塞的空格」通通清除、拉成一條直線！
+        rawCode = rawCode.replace(/[\r\n\s]/g, "");
+
+        // 🎯 3. 【核心新增：補回被網址吃掉的加號】
+        // 此時因為換行和空格都沒了，把被網址列偷偷洗成空白的加號「+」強制變回來
+        rawCode = rawCode.replace(/ /g, "+");
+        
+        // 順手幫輸入框淨化成乾淨、拉直後的純代碼，畫面比較好看
+        roomCodeInput.value = rawCode; 
+
+        // 🎯 4. 執行標準解碼（此時的 rawCode 已經被拉直修復，100% 絕對不會再卡換行崩潰了！）
         const decodedStr = decodeURIComponent(atob(rawCode).split('').map(function(c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
@@ -436,6 +442,7 @@ function loadRoomCode() {
         console.error("解析失敗原因:", e);
     }
 }
+
 
 
 // ==========================================

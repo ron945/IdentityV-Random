@@ -767,7 +767,7 @@ function copyRoomCode() {
 
 
 // ==========================================
-// 【正式實裝】貼上代碼還原同步畫面
+// 【正式實裝】貼上代碼還原同步畫面（已修正大括號）
 // ==========================================
 function loadRoomCode() {
     const roomCodeInput = document.getElementById("roomCode");
@@ -777,9 +777,14 @@ function loadRoomCode() {
         return;
     }
     try {
-        const decodedStr = decodeURIComponent(escape(atob(roomCodeInput.value.trim())));
+        // 🎯 使用最萬能、不挑中文的解碼方式
+        const decodedStr = decodeURIComponent(atob(roomCodeInput.value.trim()).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
         const importedData = JSON.parse(decodedStr);
         generateOnce(importedData); // 還原畫面
+        
         if (roomStatus) {
             roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>📥 成功讀取他人代碼！畫面已完全同步。</span>";
         }
@@ -788,67 +793,86 @@ function loadRoomCode() {
         if (roomStatus) {
             roomStatus.innerHTML = "<span style='color: #E74C3C; font-weight: bold;'>❌ 讀取失敗，代碼無效。</span>";
         }
+        console.error(e);
     }
-    // 🎯 當任何人點開網址時，自動檢查網址後方有沒有自帶代碼，有就自動還原畫面
-window.addEventListener("load", function() {
-    // 使用 "load" 事件，確保 HTML、CSS、和所有的 data.js、talentTreeData.js 都 100% 載入完畢
+} // 👈 【關鍵修正】這裡是你原本漏掉的、專屬於 loadRoomCode 的結尾大括號！
+
+
+// ==========================================
+// 🎯 【暴力不卡死版】直接檢查網址參數並還原（已與上方函式完全獨立）
+// ==========================================
+(function() {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     
     if (code) {
-        try {
-            const roomCodeInput = document.getElementById("roomCode");
-            if (roomCodeInput) roomCodeInput.value = code; // 自動幫忙把代碼填入右側輸入框
-            
-            // 解碼 Base64 字串並還原成原始資料物件
-            const decodedStr = decodeURIComponent(escape(atob(code.trim())));
-            const importedData = JSON.parse(decodedStr);
-            
-            // 🎯 保險機制：給瀏覽器 300 毫秒的緩衝時間，再強制執行渲染
-            setTimeout(function() {
-                
-                // 【核心修正】直接在這裡用解出來的資料把畫面「畫」出來，100% 不會因為找不到陣列而壞掉
-                const resultArea = document.getElementById("resultArea");
-                const mapName = document.getElementById("mapName");
-                const boardArea = document.getElementById("boardArea");
-                const roomStatus = document.getElementById("roomStatus");
+        // 設定定時器，每 150 毫秒檢查一次 HTML 容器好了沒，好了就立刻暴力畫出來
+        let checkTimer = setInterval(function() {
+            const resultArea = document.getElementById("resultArea");
+            const mapName = document.getElementById("mapName");
+            const boardArea = document.getElementById("boardArea");
 
-                if (!resultArea || !importedData) return;
+            // 確保 HTML 容器都已經在網頁上就緒了
+            if (resultArea && mapName && boardArea) {
 
-                // 1. 渲染求生者畫面
-                let html = "";
-                html += "<h3>求生者</h3>";
-                importedData.survivors.forEach((surv, i) => {
-                    const ultText = surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
-                    html += `
-                        <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
-                            <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
-                            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
-                        </div>
-                    `;
-                });
+                try {
+                    // 🎯 使用最萬能、不挑字元的瀏覽器原生解碼寫法
+                    const decodedStr = decodeURIComponent(atob(code.trim()).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    
+                    const importedData = JSON.parse(decodedStr);
 
-                // 2. 渲染監管者畫面
-                html += "<h3>監管者</h3>";
-                if (importedData.hunter) {
-                    const ultText = importedData.hunter.ultimates.length > 0 ? `【${importedData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
-                    html += `
-                        <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
-                            <strong style="color: #ff4d4d;">監管者：${importedData.hunter.name}</strong> 
-                            <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-                            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${importedData.hunter.detailsText}</div>
-                        </div>
-                    `;
-                }
-                resultArea.innerHTML = html;
+                    // 安全防禦：如果資料還沒完全解開，繼續等待下一次
+                    if (!importedData || !importedData.survivors || !importedData.map) {
+                        return; 
+                    }
 
-                // 3. 渲染地圖與格子
-                if (importedData.map && mapName && boardArea) {
+                    // 順利過關！關閉計時器開始渲染
+                    clearInterval(checkTimer);
+
+                    // 幫忙把代碼填入右側輸入框
+                    const roomCodeInput = document.getElementById("roomCode");
+                    if (roomCodeInput) roomCodeInput.value = code;
+
+                    // 1. 渲染求生者畫面
+                    let html = "<h3>求生者</h3>";
+                    importedData.survivors.forEach((surv, i) => {
+                        const ultText = surv.ultimates && surv.ultimates.length > 0 
+                            ? `【${surv.ultimates.join(" + ")}】` 
+                            : "【無大天賦偏策】";
+                        html += `
+                            <div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
+                                <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
+                                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+                                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
+                            </div>
+                        `;
+                    });
+
+                    // 2. 渲染監管者畫面
+                    html += "<h3>監管者</h3>";
+                    if (importedData.hunter) {
+                        const ultText = importedData.hunter.ultimates && importedData.hunter.ultimates.length > 0 
+                            ? `【${importedData.hunter.ultimates.join(" + ")}】` 
+                            : "【無大天賦偏策】";
+                        html += `
+                            <div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
+                                <strong style="color: #ff4d4d;">監管者：${importedData.hunter.name}</strong> 
+                                <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
+                                <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${importedData.hunter.detailsText}</div>
+                            </div>
+                        `;
+                    }
+                    resultArea.innerHTML = html;
+
+                    // 3. 渲染地圖與格子
                     mapName.innerText = importedData.map.name;
                     
                     const fixedSet = new Set();
-                    importedData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+                    if (importedData.map.fixedBlocks) {
+                        importedData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+                    }
 
                     let tableHtml = '<table class="grid-board">';
                     for (let r = 0; r < importedData.map.rows; r++) {
@@ -857,7 +881,7 @@ window.addEventListener("load", function() {
                             const key = r + "-" + c;
                             if (fixedSet.has(key)) {
                                 tableHtml += '<td style="background: #151515; color: #555;">X</td>';
-                            } else if (importedData.map.cellMarkers[key] !== undefined) {
+                            } else if (importedData.map.cellMarkers && importedData.map.cellMarkers[key] !== undefined) {
                                 const marker = importedData.map.cellMarkers[key];
                                 if (marker === "監") {
                                     tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a; border-color: #8b0000;">${marker}</td>`;
@@ -872,23 +896,18 @@ window.addEventListener("load", function() {
                     }
                     tableHtml += '</table>';
                     boardArea.innerHTML = tableHtml;
+
+                    // 4. 更新狀態提示
+                    const roomStatus = document.getElementById("roomStatus");
+                    if (roomStatus) roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>🔗 已自動透過網址連結同步抽籤結果！</span>";
+                    
+                    lastGeneratedData = importedData;
+
+                } catch (e) {
+                    console.error("網址暴力解析失敗，等待下一波加載:", e);
                 }
-
-                // 4. 更新狀態提示
-                if (roomStatus) {
-                    roomStatus.innerHTML = "<span style='color: #ffd700; font-weight: bold;'>🔗 已自動透過網址連結同步抽籤結果！</span>";
-                }
-                
-                // 鎖定當前數據
-                lastGeneratedData = importedData;
-
-            }, 300);
-
-        } catch (e) {
-            console.error("網址自動解碼或渲染失敗:", e);
-        }
+            }
+        }, 150);
     }
-});
-
-}
+})();
 

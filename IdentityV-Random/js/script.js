@@ -473,7 +473,7 @@ window.addEventListener("load", function() {
 }); // 👈 這是整個 script.js 檔案的最後一行，後面什麼都沒有了
 
 // ==========================================
-// 【全網新版：最高防禦】改名為 startRandomDraw 徹底避開 691 行衝突
+// 🎯 【極致淨化：最終完全體】startRandomDraw 函式
 // ==========================================
 function startRandomDraw(externalData = null) {
     const resultArea = document.getElementById("resultArea");
@@ -539,14 +539,22 @@ function startRandomDraw(externalData = null) {
             hunterData = { name: hunter.name, ultimates: ultimates, detailsText: detailsText };
         }
 
-                // ---- 3. 地圖與選點 ----
+        // ---- 3. 地圖與選點（全新淨化：精準 1 監 4 求生） ----
         let mapData = null;
         const enabledMaps = maps.filter(map => !map.disabled);
         if (enabledMaps.length > 0) {
             const mapIndex = Math.floor(Math.random() * enabledMaps.length);
             const selectedMap = enabledMaps[mapIndex];
             const fixedSet = new Set();
-            if (selectedMap.fixedBlocks) selectedMap.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+            
+            // 🎯 修正：不論是單機抽還是讀取網址，通通使用 [0] 和 [1] 精準抓取座標，保證 100% 成功生成 "1-3"
+            if (selectedMap.fixedBlocks) {
+                selectedMap.fixedBlocks.forEach(block => {
+                    if (block && block.length >= 2) {
+                        fixedSet.add(block[0] + "-" + block[1]);
+                    }
+                });
+            }
 
             let emptyCells = [];
             for (let r = 0; r < selectedMap.rows; r++) {
@@ -557,7 +565,8 @@ function startRandomDraw(externalData = null) {
             emptyCells.sort(() => 0.5 - Math.random());
 
             let cellMarkers = {};
-            // A. 精準分配 4 個求生者出生點 (顯示 1, 2, 3, 4)
+            
+            // 分配 4 個求生者
             for (let i = 1; i <= 4; i++) {
                 if (emptyCells.length > 0) {
                     let cell = emptyCells.shift();
@@ -565,7 +574,7 @@ function startRandomDraw(externalData = null) {
                 }
             }
             
-            // B. 🎯 【核心修復】精準分配 1 個監管者出生點，多餘的 shift 通通刪除！
+            // 🎯 【唯一監管者】自己抽籤時，絕對精準只分一格給監管者！
             if (emptyCells.length > 0) {
                 let cell = emptyCells.shift();
                 cellMarkers[cell.row + "-" + cell.col] = "監";
@@ -577,20 +586,21 @@ function startRandomDraw(externalData = null) {
         finalData = { survivors: survivors, hunter: hunterData, map: mapData };
     }
 
-    // 🎯 更換成這個最穩固的中文 Base64 編碼方式：
-if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
-    const jsonStr = JSON.stringify(finalData);
-    // 萬能中文相容壓縮法
-    roomCodeInput.value = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-        return String.fromCharCode(parseInt(p1, 16));
-    }));
-}
+    lastGeneratedData = finalData;
 
+    // 壓縮並自動在右側填入代碼
+    if (!externalData && roomCodeInput && finalData && finalData.survivors && finalData.survivors.length > 0) {
+        const jsonStr = JSON.stringify(finalData);
+        roomCodeInput.value = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode(parseInt(p1, 16));
+        }));
+    }
 
     if (!finalData || !finalData.survivors || finalData.survivors.length === 0) return;
 
     // ---- 4. 渲染畫面 ----
-    let html = "<h3>求生者</h3>";
+    let html = "";
+    html += "<h3>求生者</h3>";
     finalData.survivors.forEach((surv, i) => {
         const ultText = surv.ultimates && surv.ultimates.length > 0 ? `【${surv.ultimates.join(" + ")}】` : "【無大天賦偏策】";
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
@@ -602,7 +612,7 @@ if (!externalData && roomCodeInput && finalData && finalData.survivors && finalD
 
     html += "<h3>監管者</h3>";
     if (finalData.hunter) {
-        const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.grid || finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
             <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
             <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
@@ -611,21 +621,45 @@ if (!externalData && roomCodeInput && finalData && finalData.survivors && finalD
     }
     resultArea.innerHTML = html;
 
+    // ---- 5. 渲染地圖與格子（三重最高防禦渲染） ----
     if (finalData.map) {
         mapName.innerText = finalData.map.name;
         const fixedSet = new Set();
-        if (finalData.map.fixedBlocks) finalData.map.fixedBlocks.forEach(block => fixedSet.add(block + "-" + block));
+        
+        // 🎯 核心大修復：不論本機還是網址讀取，通通改用最正規的 [0]-[1] 語法來抓障礙物！
+        if (finalData.map.fixedBlocks) {
+            finalData.map.fixedBlocks.forEach(block => {
+                if (block && block.length >= 2) {
+                    fixedSet.add(block[0] + "-" + block[1]);
+                }
+            });
+        }
 
         let tableHtml = '<table class="grid-board">';
+        let hunterDrawn = false; // 記錄監管者是否畫過
+
         for (let r = 0; r < finalData.map.rows; r++) {
             tableHtml += '<tr>';
             for (let c = 0; c < finalData.map.cols; c++) {
                 const key = r + "-" + c;
+                
                 if (fixedSet.has(key)) {
+                    // 🎯 永眠鎮的灰色 X 障礙物 100% 回歸就位！
                     tableHtml += '<td style="background: #151515; color: #555;">X</td>';
-                } else if (finalData.map.cellMarkers && finalData.map.cellMarkers[key] !== undefined) {
-                    const marker = finalData.map.cellMarkers[key];
-                    tableHtml += `<td style="color: ${marker === '監' ? '#ff4d4d' : '#ffd700'}; background: ${marker === '監' ? '#3a1a1a' : '#2f2715'};">${marker}</td>`;
+                } else if (finalData.map.cellMarkers && finalData.map.cellMarkers[key] !== undefined && finalData.map.cellMarkers[key] !== null) {
+                    
+                    let marker = finalData.map.cellMarkers[key];
+                    
+                    // 🎯 只有第一個「監」可以過，剩下的格子如果是監通通洗掉，100% 杜絕三個監管者！
+                    if (marker === '監' && !hunterDrawn) {
+                        tableHtml += `<td style="color: #ff4d4d; background: #3a1a1a;">監</td>`;
+                        hunterDrawn = true; 
+                    } else if (marker === '監' && hunterDrawn) {
+                        tableHtml += `<td></td>`;
+                    } else {
+                        tableHtml += `<td style="color: #ffd700; background: #2f2715;">${marker}</td>`;
+                    }
+
                 } else {
                     tableHtml += '<td></td>';
                 }
@@ -636,3 +670,4 @@ if (!externalData && roomCodeInput && finalData && finalData.survivors && finalD
         boardArea.innerHTML = tableHtml;
     }
 }
+

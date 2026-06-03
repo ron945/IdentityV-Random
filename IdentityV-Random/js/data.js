@@ -243,6 +243,15 @@ const maps = [
 
         fixedBlocks:[]
     },
+     {
+        name:"不歸林",
+        disabled:false,
+
+        rows:3,
+        cols:3,
+
+        fixedBlocks:[]
+    },
 
     // ===================
     // 3x4 地圖
@@ -268,15 +277,7 @@ const maps = [
         fixedBlocks:[]
     },
 
-    {
-        name:"不歸林",
-        disabled:false,
-
-        rows:3,
-        cols:4,
-
-        fixedBlocks:[]
-    },
+   
 
     // ===================
     // 特殊地圖

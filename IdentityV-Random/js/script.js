@@ -606,7 +606,7 @@ function startRandomDraw(externalData = null) {
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #ffcc00; padding-left: 8px;">
             <strong style="color: #ffcc00;">${i + 1}號求生者：${surv.name}</strong> 
             <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${surv.detailsText}</div>
+            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">天賦：${surv.detailsText}</div>
         </div>`;
     });
 
@@ -616,7 +616,7 @@ function startRandomDraw(externalData = null) {
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
             <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
             <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
-            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">配點：${finalData.hunter.detailsText}</div>
+            <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">天賦：${finalData.hunter.detailsText}</div>
         </div>`;
     }
     resultArea.innerHTML = html;

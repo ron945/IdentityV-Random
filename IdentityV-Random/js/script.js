@@ -627,7 +627,7 @@ function startRandomDraw(externalData = null) {
         const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
         
         // 🎯【核心新增】檢查這筆資料有沒有帶輔助特質，有就生成【特質：閃現】文字，沒有就留空
-        const assistText = finalData.hunter.assist ? `【特質：${finalData.hunter.assist}】` : "";
+        const assistText = finalData.hunter.assist ? `【輔助特質：${finalData.hunter.assist}】` : "";
 
         // 🎯【核心新增】在 ${finalData.hunter.name} 後方加入了 <span style="...">...</span> 來把特質名字印出來
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">

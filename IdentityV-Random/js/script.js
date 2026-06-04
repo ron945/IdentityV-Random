@@ -518,7 +518,7 @@ function startRandomDraw(externalData = null) {
             }
         }
 
-        // ---- 2. 監管者抽取 ----
+       // ---- 2. 監管者抽取 ----
         let hunterData = null;
         const hunter = getRandomRole(hunterRoles, []);
         if (hunter) {
@@ -536,7 +536,19 @@ function startRandomDraw(externalData = null) {
                 });
                 detailsText = filtered.map(t => `${t.name}(${t.level})`).join(", ");
             }
-            hunterData = { name: hunter.name, ultimates: ultimates, detailsText: detailsText };
+
+            // 🎯 【核心新增】直接從你 data.js 載入的 assists 陣列中隨機抽一個輔助特質
+            const randomAssist = (typeof assists !== 'undefined' && assists.length > 0) 
+                ? assists[Math.floor(Math.random() * assists.length)] 
+                : "";
+
+            // 🎯 【核心新增】將抽到的 assist 放入 hunterData 物件中打包
+            hunterData = { 
+                name: hunter.name, 
+                ultimates: ultimates, 
+                detailsText: detailsText,
+                assist: randomAssist 
+            };
         }
 
         // ---- 3. 地圖與選點（全新淨化：精準 1 監 4 求生） ----
@@ -610,16 +622,22 @@ function startRandomDraw(externalData = null) {
         </div>`;
     });
 
-    html += "<h3>監管者</h3>";
+        html += "<h3>監管者</h3>";
     if (finalData.hunter) {
         const ultText = finalData.hunter.ultimates && finalData.hunter.ultimates.length > 0 ? `【${finalData.hunter.ultimates.join(" + ")}】` : "【無大天賦偏策】";
+        
+        // 🎯【核心新增】檢查這筆資料有沒有帶輔助特質，有就生成【特質：閃現】文字，沒有就留空
+        const assistText = finalData.hunter.assist ? `【特質：${finalData.hunter.assist}】` : "";
+
+        // 🎯【核心新增】在 ${finalData.hunter.name} 後方加入了 <span style="...">...</span> 來把特質名字印出來
         html += `<div style="margin-bottom: 12px; border-left: 3px solid #e74c3c; padding-left: 8px;">
-            <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name}</strong> 
+            <strong style="color: #ff4d4d;">監管者：${finalData.hunter.name} <span style="color: #ff7675; font-size: 0.95rem; font-weight: normal; margin-left: 4px;">${assistText}</span></strong> 
             <span style="color: #e67e22; font-weight: bold; margin-left: 5px;">${ultText}</span>
             <div style="font-size: 0.85rem; color: #bbbbbb; margin-top: 2px;">天賦：${finalData.hunter.detailsText}</div>
         </div>`;
     }
     resultArea.innerHTML = html;
+
 
     // ---- 5. 渲染地圖與格子（三重最高防禦渲染） ----
     if (finalData.map) {
